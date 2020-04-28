@@ -1,56 +1,59 @@
+import operator
+import math
 import csv
 import random
 
 ##
 #
-# load irist dataset and randomly split it into test set and training set
+# Load the user provided dataset and 
+# provide a random split it 
+# Split into test set and training set
 #
 ##
 
-def loadDataset(filename, split, trainingSet=[] , testSet=[]):
-    with open(filename, 'rt') as csvfile:
+def load_data(fname, split, training_set=[] , test_set=[]):
+    with open(fname, 'rt') as csvfile:
         lines = csv.reader(csvfile)
         dataset = list(lines)
         for x in range(1,len(dataset)-1):
-            for y in range(4):
+            for y in range(len(dataset[x])-1):
                 dataset[x][y] = float(dataset[x][y])
             if random.random() < split:
-                trainingSet.append(dataset[x])
+                training_set.append(dataset[x])
             else:
-                testSet.append(dataset[x])
+                test_set.append(dataset[x])
 
 ##
 #
-# euclidean distance calcualtion
+# Euclidean dist calculation
+# for identifying nearby nodes
 #
 ##
-
-import math
-def euclideanDistance(instance1, instance2, length):
-    distance = 0
+def euclid_dist_calc(instance1, instance2, length):
+    dist = 0
     for x in range(length):
-        distance += pow((instance1[x] - instance2[x]), 2)
-    return math.sqrt(distance)
+        dist += pow((instance1[x] - instance2[x]), 2)
+    return math.sqrt(dist)
 
 
 
 ###
 #
-# getting the nearest neighbors by selecting subset with the smallest distance
+# Getting the nearest neighbors by 
+# selecting subset with the smallest 
+# distance from node x
 #
 ###
-
-import operator 
-def getNeighbors(trainingSet, testInstance, k):
-    distances = []
+def get_near_neighbors(training_set, testInstance, k):
+    dists = []
     length = len(testInstance)-1
-    for x in range(len(trainingSet)):
-        dist = euclideanDistance(testInstance, trainingSet[x], length)
-        distances.append((trainingSet[x], dist))
-    distances.sort(key=operator.itemgetter(1))
+    for x in range(len(training_set)):
+        dist = euclid_dist_calc(testInstance, training_set[x], length)
+        dists.append((training_set[x], dist))
+    dists.sort(key=operator.itemgetter(1))
     neighbors = []
     for x in range(k):
-        neighbors.append(distances[x][0])
+        neighbors.append(dists[x][0])
     return neighbors
 
 
@@ -60,17 +63,15 @@ def getNeighbors(trainingSet, testInstance, k):
 # Get the predicted group
 #
 ###
-
-import operator
-def getResponse(neighbors):
-    classVotes = {}
+def get_result_neighbour(neighbors):
+    class_points = {}
     for x in range(len(neighbors)):
         response = neighbors[x][-1]
-        if response in classVotes:
-            classVotes[response] += 1
+        if response in class_points:
+            class_points[response] += 1
         else:
-            classVotes[response] = 1
-    sortedVotes = sorted(classVotes.items(), key=operator.itemgetter(1), reverse=True)
+            class_points[response] = 1
+    sortedVotes = sorted(class_points.items(), key=operator.itemgetter(1), reverse=True)
     return sortedVotes[0][0]
 
 
@@ -79,42 +80,44 @@ def getResponse(neighbors):
 # Measure the accuracy of the predictions
 #
 ###
-def getAccuracy(testSet, predictions):
+def get_stats(test_set, preds):
     correct = 0
-    for x in range(len(testSet)):
-        if testSet[x][-1] in predictions[x]: 
+    for x in range(len(test_set)):
+        if test_set[x][-1] in preds[x]: 
             correct = correct + 1
             
-    return (correct/float(len(testSet))*100) 
+    return (correct/float(len(test_set))*100) 
 
 def main():
     # prepare data
-    trainingSet=[]
-    testSet=[]
+    training_set=[]
+    test_set=[]
 
     # Defining the train and test split
     split = 0.70
 
     # load the dataset
-    loadDataset('iris.csv', split, trainingSet, testSet)
-    print ('Train set: ' + repr(len(trainingSet)))
-    print ('Test set: ' + repr(len(testSet)))
+    load_data('seeds.csv', split, training_set, test_set)
+    print ('Train set size: ' + repr(len(training_set)))
+    print ('Test set size: ' + repr(len(test_set)))
 
-    # generate predictions
-    predictions=[]
+    # generate preds
+    preds=[]
     k = 3
-    print("Predicted\t\tActual")
-    print("----------------------------------------")
-    for x in range(len(testSet)):
+    print("Predicted\tActual")
+    print("-----------\t------------")
+    #print(training_set[0])
+    #exit(0)
+    for x in range(len(test_set)):
         # Identify the k groups
-        neighbors = getNeighbors(trainingSet, testSet[x], k)
-        # Get the predictions
-        result = getResponse(neighbors)
-        predictions.append(result)
-        print('' + repr(result) + '\t\t' + repr(testSet[x][-1]))
+        neighbors = get_near_neighbors(training_set, test_set[x], k)
+        # Get the preds
+        result = get_result_neighbour(neighbors)
+        preds.append(result)
+        print('' + repr(result) + '\t\t' + repr(test_set[x][-1]))
     
     # Calculate the accuracy
-    accuracy = getAccuracy(testSet, predictions)
+    accuracy = get_stats(test_set, preds)
     print('Accuracy: ' + repr(accuracy) + '%')
     
 if __name__ == "__main__":
